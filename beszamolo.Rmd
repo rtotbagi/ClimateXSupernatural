@@ -1,0 +1,346 @@
+---
+title: "Beszámoló"
+author: "Tot Bagi Robert"
+date: "`r Sys.Date()`"
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Klimatikus viszonyok és a természetfeletti beavatkozás
+
+## A kutatás tárgya
+
+Alapvető témám annak feltárása, hogy a környezeti (éghajlati) kiszámíthatatlanság összefüggésben áll-e a természetfeletti beavatkozásokba vetett hiedelmek elterjedtségével, melyek szerint a természetfeletti ágensek közvetlenül beavatkoznak az emberi élet eseményeibe (például betegség, blaszerencse, siker vagy halál esetén). Kultúraközi feltáró analízist kívánok futtatni a rendelkezésre álló adatokon. A kutatás előregisztálása megtörtént az [AsPredicted.org](https://aspredicted.org/see_one.php?a=lGLSq0aVxWhgABLv4yFy1AqGE27x_wJF5WjkieBseZE) oldalon.
+
+## Adatforrások
+
+A [D-PLACE](https://d-place.org/) (Database of Places, Language, Culture and Environment) egy nyílt hozzáférésű, kultúraközi összehasonlító adatbázis, amely különböző etnográfiai, nyelvészeti és környezeti adatforrásokat integrál egységes rendszerbe. Az adatbázis célja, hogy lehetővé tegye a kultúrák közötti összehasonlító vizsgálatokat, valamint az emberi viselkedés, a társadalmi intézmények és a környezeti tényezők közötti kapcsolatok elemzését.
+
+A **Standard Cross-Cultural Sample (SCCS)** egy széles körben használt kultúraközi adatbázis, amely 186, földrajzilag és történetileg viszonylag független társadalom standardizált etnográfiai adatait tartalmazza. Az SCCS-t kifejezetten azért hozták létre, hogy csökkentse a kulturális rokonság és a földrajzi közelség által okozott torzításokat a kultúraközi összehasonlítások során. Az adatbázis számos társadalmi, gazdasági, vallási, politikai és kulturális változót tartalmaz, amelyek lehetővé teszik az emberi társadalmak közötti mintázatok vizsgálatát.
+
+Az **Ethnographic Atlas (EA)** George P. Murdock által létrehozott, klasszikus kultúraközi adatbázis, amely több mint ezer társadalom etnográfiai jellemzőit tartalmazza. Az adatbázis számos kulturális dimenzióról szolgáltat információt, például a gazdasági szerveződésről, a rokonsági rendszerekről, a politikai struktúrákról és a vallási hiedelmekről.
+
+Az **ecoClimate** adatbázis olyan környezeti és éghajlati mutatókat tartalmaz, amelyek különböző társadalmak földrajzi elhelyezkedéséhez kapcsolhatók. Az adatbázis lehetővé teszi a hosszú távú éghajlati mintázatok, a hőmérsékleti és csapadékviszonyok változékonyságának, valamint ezek kiszámíthatóságának vizsgálatát.
+
+### Felhasznált változók
+
+A függő változó a természetfeletti ágensek emberi életeseményekre gyakorolt közvetlen hatásába vetett hiedelmek elterjedtsége.
+
+Ezt a konstruktumot a következő etnográfiai változók segítségével operacionalizáljuk:
+
+-   EA034 (Religion: high gods) az Ethnographic Atlas adatbázisból;
+-   valamint az SCCS adatbázis következő változói:
+    -   SCCS645 (Theories of Infection),
+    -   SCCS647 (Theories of Deterioration),
+    -   SCCS648 (Theories of Accident),
+    -   SCCS649 (Theories of Fate),
+    -   SCCS652 (Theories of Mystical Retribution),
+    -   SCCS653 (Theories of Soul Loss),
+    -   SCCS654 (Theories of Spirit Aggression),
+    -   SCCS655 (Theories of Sorcery),
+    -   SCCS656 (Theories of Witchcraft).
+
+Ezek a változók a természetfeletti ágensekbe vetett hit, az életesemények természetfeletti eredetének tulajdonítása, a betegségek, balszerencsék, büntetések és egyéb természetfeletti beavatkozások magyarázataihoz kapcsolódó hiedelmeket ragadják meg.
+
+A változókból egy összetett bináris vagy ordinális mutató kerül kialakításra, amely a természetfeletti beavatkozásba vetett hiedelmek mértékét reprezentálja.
+
+A környezeti kiszámíthatatlanság mérésére az ecoClimate adatbázis következő változóit használjuk:
+
+-   AnnualTemperatureVariance,
+-   AnnualPrecipitationVariance,
+-   TemperaturePredictability,
+-   PrecipitationPredictability.
+
+A változókból egy összetett bináris vagy ordinális mutató kerül kialakításra, amely az éghajlat változákonysának mértékét reprezentálja.
+
+## Adatelőkészítés
+
+A nyers adatbázisokat leszűrtem a használni tervezett változókra, és összekapcsoltam a megfelelő kulcsokkal. Ebből készült egy széles (d_wide) és egy hosszú (d_long) állomány. A részletekről lásd [helper.R](https://github.com/rtotbagi/ClimateXSupernatural/blob/main/helper.R). Betöltjük a szükséges könyvtárakat, illetve adatállományokat:
+
+```{r read libraries and data, warning = FALSE, message = FALSE, echo = TRUE}
+library(tidyverse)
+
+d_wide <- read_csv("https://raw.githubusercontent.com/rtotbagi/ClimateXSupernatural/refs/heads/main/d_wide.csv")
+d_long <- read_csv("https://raw.githubusercontent.com/rtotbagi/ClimateXSupernatural/refs/heads/main/d_long.csv")
+```
+
+Csak azokat az adatsorokat fogjuk vizsgálni, ahol minden változó rendelkezésre áll, ezért leszűrjük az adatot:
+
+```{r filter for existing data, warning = FALSE, message = FALSE, echo = TRUE}
+analysis_data <- d_wide %>%
+  filter(
+    !is.na(EA034),
+    !is.na(SCCS649),
+    !is.na(SCCS652),
+    !is.na(SCCS653),
+    !is.na(SCCS654),
+    !is.na(SCCS655),
+    !is.na(SCCS656),
+    !is.na(AnnualTemperatureVariance),
+    !is.na(AnnualPrecipitationVariance),
+    !is.na(TemperaturePredictability),
+    !is.na(PrecipitationPredictability)
+  )
+```
+
+A szűrés után **`r nrow(analysis_data)`** használható adatsorral dolgozhatunk.
+
+### Operacionalizálás - éghajlat
+
+A klíma kiszámíthatatlanságát négy ecoClimate mutató alapján operacionalizáltuk. A variancia-mutatók magasabb értékei nagyobb környezeti változékonyságot jeleznek, míg a prediktabilitási mutatók esetében az értékeket megfordítottuk, hogy minden komponens ugyanabba az irányba mutasson. A standardizált komponensek átlagából képeztük a ClimateIndex változót.
+
+```{r creating ClimateIndex, warning = FALSE, message = FALSE, echo = TRUE}
+analysis_data <- analysis_data %>%
+  mutate(
+    TemperatureUnpredictability = 1 - TemperaturePredictability,
+    PrecipitationUnpredictability = 1 - PrecipitationPredictability,
+    
+    AnnualTemperatureVariance_z = as.numeric(scale(AnnualTemperatureVariance)),
+    AnnualPrecipitationVariance_z = as.numeric(scale(AnnualPrecipitationVariance)),
+    TemperatureUnpredictability_z = as.numeric(scale(TemperatureUnpredictability)),
+    PrecipitationUnpredictability_z = as.numeric(scale(PrecipitationUnpredictability)),
+    
+    ClimateIndex = rowMeans(
+      cbind(
+        AnnualTemperatureVariance_z,
+        AnnualPrecipitationVariance_z,
+        TemperatureUnpredictability_z,
+        PrecipitationUnpredictability_z
+      ),
+      na.rm = TRUE
+    )
+  )
+```
+
+A **ClimateIndex** négy ecoClimate mutató standardizált átlagából készült.
+
+```{r checking ClimateIndex correlations, warning = FALSE, message = FALSE, echo = FALSE}
+climate_component_correlations <- analysis_data %>%
+  select(
+    ClimateIndex,
+    AnnualTemperatureVariance,
+    AnnualPrecipitationVariance,
+    TemperaturePredictability,
+    PrecipitationPredictability
+  ) %>%
+  cor(use = "pairwise.complete.obs") %>%
+  as.data.frame() %>%
+  rownames_to_column("Variable") %>%
+  select(Variable, ClimateIndex) %>%
+  filter(Variable != "ClimateIndex") %>%
+  mutate(
+    AbsCorrelation = abs(ClimateIndex)
+  ) %>%
+  arrange(desc(AbsCorrelation))
+```
+
+ A ClimateIndex kialakításában a hőmérsékleti prediktabilitás, a hőmérsékleti variancia és a csapadék prediktabilitása játszotta a legnagyobb szerepet, míg az éves csapadékvariancia hozzájárulása minimális volt.
+ 
+| Klímaváltozó                | Korreláció a ClimateIndex-szel | Hozzájárulás   |
+|-----------------------------|--------------------------------|----------------|
+| TemperaturePredictability   | -0.793                         | Erős           |
+| AnnualTemperatureVariance   | 0.744                          | Erős           |
+| PrecipitationPredictability | -0.589                         | Közepes        |
+| AnnualPrecipitationVariance | 0.048                          | Elhanyagolható |
+
+Megvizsgálva a ClimateIndex eloszlását a kultúrák között, egy alkalmas mutatónak tűnik a vizsgálatunkhoz.
+
+```{r checking ClimateIndex, fig.width=6, fig.height=3, warning = FALSE, message = FALSE, echo = FALSE}
+ggplot(analysis_data, aes(x = ClimateIndex)) +
+  geom_histogram(bins = 20) +
+  labs(
+    x = "ClimateIndex",
+    y = "Kultúrák száma"
+  )
+```
+
+### Operacionalizálás - természetfeletti hiedelem
+
+A kutatás központi célja annak mérése volt, hogy az egyes társadalmakban milyen mértékben jelennek meg olyan hiedelmek, amelyek szerint természetfeletti ágensek vagy erők közvetlenül beavatkoznak az emberi élet eseményeibe. A D-PLACE adatbázis több, részben eltérő adatforrásból származó kulturális változót tartalmaz, amelyek különböző aspektusait ragadják meg a természetfeletti oksági magyarázatoknak. A természetfeletti beavatkozás fogalma azonban nem operacionalizálható egyetlen változó segítségével teljes bizonyossággal. Egyes adatforrások általános vallási vagy természetfeletti hiedelmeket mérnek, míg mások konkrétan arra vonatkoznak, hogy egy adott kultúrában milyen mértékben tulajdonítanak betegségeket, balszerencsét vagy egyéb életeseményeket természetfeletti ágensek cselekvésének.
+
+Ezért több lehetséges operacionalizációt vizsgáltunk meg, és két eltérő szigorúságú összetett mutatót alakítottunk ki: egy konzervatívabb, valamint egy tágabb értelmezésű természetfeletti beavatkozás indexet.
+
+#### Konzervatív hiedelmi mutató
+
+Az Ethnographic Atlas EA034 változója (High Gods Active in Human Affairs - Isten aktívan beavatkozik az emberi ügyekbe) közvetlenül kapcsolódik a kutatás kérdéséhez, mivel azt rögzíti, hogy a kultúra hisz egy általa ismert legfőbb természetfeletti lényben. A változó ugyanakkor kizárólag a „high god” koncepcióra vonatkozik, ezért számos olyan társadalomban korlátozott információt nyújt, ahol a természetfeletti oksági magyarázatok elsősorban szellemekhez, boszorkánysághoz vagy más természetfeletti erőkhöz kapcsolódnak.
+
+```{r creating ConservativeIndex, warning = FALSE, message = FALSE, echo = TRUE}
+analysis_data <- analysis_data %>%
+  mutate(
+    ConservativeIndex = EA034
+  )
+```
+
+A változót eredeti ordinális formájában tartottuk meg, mivel a kategóriák a természetfeletti ágencia és beavatkozás eltérő mértékeit reprezentálják. A bináris átalakítás jelentős információvesztéssel járt volna, ezért a további elemzésekben az eredeti skálát alkalmaztuk, melynek értéktartománya [1..4].
+
+#### Intervenciós hiedelmi mutató
+
+A természetfeletti beavatkozás kulturális jelentőségének szélesebb megragadása érdekében az SCCS adatbázis olyan változóit is bevontuk, amelyek azt rögzítik, hogy egy társadalom milyen magyarázatokat ad betegségekre, balszerencsére vagy egyéb negatív eseményekre. Ezek a változók lehetővé teszik annak vizsgálatát, hogy a természetfeletti ágensek milyen szerepet töltenek be a mindennapi események oksági értelmezésében. A mélyebb értelmezés során úgy döntöttük, hogy a változók közül a következőket használjuk az indexünkban:
+
+| SCCS ID | Angol név                        | Rövid magyar jelentés                                            | Indexbe |
+|---------|----------------------------------|------------------------------------------------------------------|---------|
+| SCCS645 | Theories of Infection            | A betegségek fertőzéses eredetének magyarázata                   | Nem     |
+| SCCS647 | Theories of Deterioration        | Betegségek és állapotromlás természetes lefolyásának magyarázata | Nem     |
+| SCCS648 | Theories of Accident             | Balesetek okaira vonatkozó magyarázatok                          | Nem     |
+| SCCS649 | Theories of Fate                 | A sors és végzet szerepe az emberi eseményekben                  | Igen    |
+| SCCS652 | Theories of Mystical Retribution | Természetfeletti büntetés vagy megtorlás mint ok                 | Igen    |
+| SCCS653 | Theories of Soul Loss            | A lélek elvesztésével magyarázott betegségek és balsors          | Igen    |
+| SCCS654 | Theories of Spirit Aggression    | Szellemek vagy természetfeletti lények támadásai mint okok       | Igen    |
+| SCCS655 | Theories of Sorcery              | Varázslás és mágikus ártás mint okok                             | Igen    |
+| SCCS656 | Theories of Witchcraft           | Boszorkányság mint okmagyarázat                                  | Igen    |
+
+A kiválasztott változókat - mivel ugyanabban az értéktartományban vannak kódolva - egyszerű átlagolással alakítjuk egy közös index változóvá:
+
+```{r creating InterventionIndex, warning = FALSE, message = FALSE, echo = TRUE}
+analysis_data <- analysis_data %>%
+  mutate(
+    InterventionIndex =
+      rowMeans(
+        cbind(
+          SCCS649,
+          SCCS652,
+          SCCS653,
+          SCCS654,
+          SCCS655,
+          SCCS656
+        ),
+        na.rm = TRUE
+      )
+  )
+```
+
+```{r checking InterventionIndex correlation, warning = FALSE, message = FALSE, echo = FALSE, include = FALSE}
+intervention_cor <- analysis_data %>%
+  select(
+    SCCS649,
+    SCCS652,
+    SCCS653,
+    SCCS654,
+    SCCS655,
+    SCCS656
+  ) %>%
+  cor(use = "pairwise.complete.obs")
+
+intervention_cor
+```
+
+Az SCCS-változók korrelációs mátrixa nem támasztotta alá, hogy a természetfeletti oksági magyarázatok egységes konstrukciót alkotnának. A változók közötti korrelációk általában gyengék voltak, több esetben pedig negatív kapcsolat mutatkozott. Ez arra utal, hogy a különböző természetfeletti magyarázati rendszerek nem ugyanannak a dimenziónak a megnyilvánulásai, hanem részben egymást helyettesítő kulturális alternatívák lehetnek. Ugyanakkor a keretek szűkössége miatt maradunk elemzésünkben ennél a szerény kontrukciónál - nem kezdjük dimenzionálni az indexet. A kapott eredményünk egyébként az átlagolás miatt egy szűkebb tartományra nyomta össze a változókat, de használható elosztást mutat. 
+
+```{r checking InterventionIndex, fig.width=6, fig.height=3, warning = FALSE, message = FALSE, echo = FALSE}
+ggplot(
+  analysis_data,
+  aes(x = InterventionIndex)
+) +
+  geom_histogram(
+    bins = 15
+  ) +
+  labs(
+    title = "Az Intervention Index eloszlása",
+    x = "Intervention Index",
+    y = "Kultúrák száma"
+  )
+```
+
+## Vizsgálat eredménye
+
+```{r checking Index correlations, warning = FALSE, message = FALSE, echo = FALSE, include = FALSE}
+cor(
+  analysis_data$ClimateIndex,
+  analysis_data$ConservativeIndex,
+  use = "pairwise.complete.obs"
+)
+
+cor(
+  analysis_data$ClimateIndex,
+  analysis_data$InterventionIndex,
+  use = "pairwise.complete.obs"
+)
+```
+
+Sajnos a kialakított éghajlati változó (ClimateIndex) és a kialakított természetfeletti változók (ConservativeIndex, InterventionIndex) között nagyon gyenge kapcsolat mutatható ki:
+
+| Változópár                       | Pearson-féle korreláció (r) |
+|----------------------------------|-----------------------------|
+| ClimateIndex – ConservativeIndex | 0.016                       |
+| ClimateIndex – InterventionIndex | -0.065                      |
+
+Ez látszik a következő ábrákon is:
+
+```{r corr plots, fig.width=3, fig.height=3, echo=FALSE}
+analysis_data %>% 
+  ggplot(aes(ClimateIndex, ConservativeIndex)) +
+  geom_point() +
+  theme_bw() +
+  geom_smooth(method = 'lm', formula = 'y ~ x') +
+  xlab('Éghajlat szélsőségesség') +
+  ylab('Létező természetfeletti')
+
+analysis_data %>% 
+  ggplot(aes(ClimateIndex, InterventionIndex)) +
+  geom_point() +
+  theme_bw() +
+  geom_smooth(method = 'lm', formula = 'y ~ x') +
+  xlab('Éghajlat szélsőségesség') +
+  ylab('Beavatkozó természetfeletti')
+```
+
+```{r linear regression, warning = FALSE, message = FALSE, echo = FALSE, include = FALSE}
+model1 <- lm(
+  InterventionIndex ~ ClimateIndex,
+  data = analysis_data
+)
+
+summary(model1)
+
+model2 <- lm(
+  InterventionIndex ~
+    ClimateIndex +
+    ConservativeIndex,
+  data = analysis_data
+)
+
+summary(model2)
+```
+
+Lineáris regressziós vizsgálattal hasonlóan szerény eredményre jutottunk. Bár a klíma szélsőségesebb értékeinél a természetfeletti hiedelmek átlagos szintje enyhén emelkedni látszik, a mintázat gyenge és bizonytalan, összhangban a korrelációs és regressziós elemzések nem szignifikáns eredményeivel. A simított trendvonalak alapján ugyanakkor mind a konzervatív, mind az intervenciós operacionalizáció esetében enyhe nemlineáris mintázat figyelhető meg (LOESS módszert használva).
+
+```{r corr plots nonlinear, fig.width=3, fig.height=3, echo=FALSE, message=FALSE}
+ggplot(
+  analysis_data,
+  aes(
+    ClimateIndex,
+    ConservativeIndex
+  )
+) +
+  geom_point() +
+  geom_smooth() +
+  xlab('Éghajlat szélsőségesség') +
+  ylab('Létező természetfeletti')
+
+
+ggplot(
+  analysis_data,
+  aes(
+    ClimateIndex,
+    InterventionIndex
+  )
+) +
+  geom_point() +
+  geom_smooth() +
+  xlab('Éghajlat szélsőségesség') +
+  ylab('Beavatkozó természetfeletti')
+```
+
+## Tanulság
+
+A kutatás során azt vizsgáltam, hogy az éghajlati kiszámíthatatlanság és szélsőségesség összefügg-e a természetfeletti beavatkozásba vetett hiedelmek előfordulásával különböző kultúrákban. Az elemzéshez a D-PLACE adatbázis kulturális változóit kapcsoltam össze éghajlati mutatókkal, majd leíró statisztikai és feltáró adatelemzési módszerekkel vizsgáltam a kapcsolatokat.
+
+Az eredmények alapján nem találtam erős vagy egyértelmű összefüggést az éghajlati szélsőségesség és a természetfeletti beavatkozásba vetett hit között. A korrelációs és regressziós elemzések nem mutattak szignifikáns kapcsolatot, ugyanakkor a vizuális elemzések alapján enyhe nemlineáris mintázatok megfigyelhetők. Ezek arra utalnak, hogy a nagyon alacsony vagy nagyon magas klímaértékek esetén a természetfeletti hiedelmek átlagos szintje valamivel magasabb lehet, de a bizonytalanság nagy, ezért ebből határozott következtetés nem vonható le.
+
+A vizsgálat egyik fontos tanulsága, hogy a természetfeletti hiedelmek kulturális elterjedtségét valószínűleg nem egyetlen környezeti tényező magyarázza. Az éghajlati környezet hatása összefonódhat számos más tényezővel, például a társadalmi szerveződéssel, a gazdasági stratégiákkal, a vallási hagyományokkal vagy a történeti kapcsolatokkal.

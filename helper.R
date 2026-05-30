@@ -47,9 +47,9 @@ climate <- climate_data %>%
   select(soc_id, var_id, code) %>%
   pivot_wider(names_from = var_id, values_from = code)
 
-# ---- Összekapcsolás ----
-# EA és SCCS: glottocode alapján
-# SCCS és ecoClimate: soc_id alapján, ha ecoClimate SCCS-azonosítókat használ
+# ---- ??sszekapcsol??s ----
+# EA ??s SCCS: glottocode alapj??n
+# SCCS ??s ecoClimate: soc_id alapj??n, ha ecoClimate SCCS-azonos??t??kat haszn??l
 
 d_wide <- ea %>%
   left_join(
@@ -62,7 +62,7 @@ d_wide <- ea %>%
     by = c("soc_id_sccs" = "soc_id")
   )
 
-# ---- Long verzió a beszámolóhoz / ábrákhoz ----
+# ---- Long verzi?? a besz??mol??hoz ----
 
 d_long <- d_wide %>%
   pivot_longer(
@@ -75,7 +75,7 @@ d_long <- d_wide %>%
     values_to = "value"
   )
 
-# ---- Mentés ----
+# ---- Ment??s ----
 
 write_csv(d_wide, "D:/Source/github.com/rtotbagi/ClimateXSupernatural/d_wide.csv")
 write_csv(d_long, "D:/Source/github.com/rtotbagi/ClimateXSupernatural/d_long.csv")
